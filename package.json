@@ -1,6 +1,6 @@
 {
   "name": "esstr",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ESSTR — String whitespace methods (trim/trimLeft/trimRight/trimStart/trimEnd) for Adobe ExtendScript (ES3), engine-measured and spec-exact",
   "type": "module",
   "main": "dist/esstr-core.esm.mjs",
@@ -51,6 +51,7 @@
     "esstr-build.mjs",
     "README.md",
     "RELEASE_NOTES-v1.0.0.md",
+    "RELEASE_NOTES-v1.1.0.md",
     "LICENSE",
     "package.json",
     "tsconfig.json"

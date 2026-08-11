@@ -8,6 +8,9 @@
   if (!ESSTR.espack || ESSTR.espack.ok !== true) {
     throw new Error("ESSTR.espack not enabled: " + (ESSTR.espack && ESSTR.espack.reason));
   }
+  if (!ESSTR.eschars || ESSTR.eschars.loaded !== true) {
+    throw new Error("merged ESCHARS facade not loaded: " + (ESSTR.eschars && ESSTR.eschars.reason));
+  }
   var s = "";
   var i = 0;
   for (i = 0; i < 300; i++) s += "x";

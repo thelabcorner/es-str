@@ -14,9 +14,11 @@
 import { BenchItem, CapabilityReport, InstallOptions } from './types';
 import { trim, trimLeft, trimRight, trimStart, trimEnd, clearMemo } from './string-core';
 import { enableNativeGate, disableNativeGate, nativeGateStatus } from './native-lane';
+import { enableEschars, disableEschars, escharsStatus } from './eschars-lane';
 
 export { trim, trimLeft, trimRight, trimStart, trimEnd, clearMemo };
 export { enableNativeGate, disableNativeGate, nativeGateStatus };
+export { enableEschars, disableEschars, escharsStatus };
 
 function globalObject(): any {
   if (typeof $ !== 'undefined' && $.global) {

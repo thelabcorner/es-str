@@ -107,7 +107,7 @@ The engine makes this harder than it looks:
 - **Never mangles data**: NULs and lone surrogates at the edges survive (the scan is code-unit based; `substring` is used for the result, never `charAt`).
 - **True polyfill install**: gap-fills `String.prototype.trim/trimLeft/trimRight/trimStart/trimEnd` only when absent; `install({ forceReplace: true })` overrides. The `ESSTR` facade (pure functions) is always available.
 - **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 8.0 KB, methods only) for per-eval injection.
-- **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. The pure ES3 scanner stays the fallback and semantic authority.
+- **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. The accel bundle is merge-composed with ESCHARS (`ESChars.dll`) through `espack-merge`, so ESSTR and ESCHARS share one ESPACK loader and one `ESB64Native` decoder instead of nested bundles. The pure ES3 scanner stays the fallback and semantic authority.
 
 ---
 
@@ -116,7 +116,7 @@ The engine makes this harder than it looks:
 | | **Runtime build** | **Full build** | **Accelerated build** |
 |---|---|---|---|
 | Files | `vendor-esstr-runtime.js` | `vendor-esstr.js`, `ESSTR.jsx` | `ESSTR.accel.jsx`, `ESSTR.accel.min.jsx`, `ESSTRTrim.dll` |
-| Size | 8.0 KB | 13.6 KB / 12.8 KB | 64.3 KB / 41.7 KB / 3.1 KB |
+| Size | 8.0 KB | 14.8 KB / 13.9 KB | 211.0 KB / 180.8 KB / 3.1 KB |
 | API | the 5 methods | methods + `capabilities()`, `install()`, `benchmark()` | full API + `enableNativeGate()`, `disableNativeGate()`, `nativeGateStatus()`, `useEspack()` |
 | Installs `String.prototype.*` | yes (gap-fill) | yes (gap-fill) | yes (gap-fill) |
 | Best for | per-eval injection, scripts that only need trim | libraries that want install control or capability census | Windows x64 scripts that want a self-extracting native lane for long strings |
@@ -143,7 +143,7 @@ The engine makes this harder than it looks:
 | Writing a normal ExtendScript script | Latest stable | `vendor-esstr.js` |
 | Importing the facade without prototype install | Latest stable | `ESSTR.jsx` |
 | Running Node-side tests or tooling | Latest stable | `esstr-core.esm.mjs` |
-| Using the self-extracting native lane on Windows x64 | Latest stable | `ESSTR.accel.jsx` or `ESSTR.accel.min.jsx` |
+| Using the self-extracting native lane on Windows x64 | Latest stable | `ESSTR.accel.jsx` or `ESSTR.accel.min.jsx` (merged ESSTRTrim + ESCHARS payloads) |
 | Testing the ExternalObject boundary directly | Latest stable | `ESSTRTrim.dll` + `native/probe.jsx` |
 
 > **Rule of thumb: start with the latest stable tag.** Every release asset is produced by `npm run build`, `npm run native-build`, and `npm run build:accel` from the exact tagged commit. Releases follow [SemVer](https://semver.org/); watch the repository → *Releases* to get notified.
@@ -239,13 +239,13 @@ Measured live in Adobe Illustrator 30.6.0 / ExtendScript 4.5.6, best-of-9 primed
 
 ### Native acceleration (`ESSTR.accel.jsx`)
 
-`ESSTR.accel.jsx` is an ESPACK self-extracting bundle. On eval it materializes `ESSTRTrim.dll`, loads it through `ExternalObject`, and enables the native gate when the DLL passes a numeric smoke check. The native lane is deliberately conservative:
+`ESSTR.accel.jsx` is an ESPACK self-extracting bundle. It is built with `espack-merge`: one loader, one shared `ESB64Native` accelerator, and flat `ESSTRTrim.dll` + `ESChars.dll` payloads. On eval it materializes `ESSTRTrim.dll`, loads it through `ExternalObject`, enables the native trim gate when the DLL passes a numeric smoke check, and publishes the merged ESCHARS facade for sibling byte-unit workloads. The native lane is deliberately conservative:
 
 - strings shorter than the native threshold stay in the ES3 lane because the memoized scanner is already faster for short/repeated values;
 - strings containing NUL or surrogate code units stay in the ES3 lane because the ExternalObject string boundary is unsafe for those units;
 - any native load, binding, or call failure falls back to the ES3 scanner.
 
-Build it with `npm run native-build && npm run build:accel`. Run `native/probe.jsx` in Illustrator before release; ExternalObject binding is per-DLL-build.
+Build it with `npm run native-build && npm run build:accel` after building the sibling ESCHARS accel (`npm run build:native && npm run build:accel` in `../eschars`). Run `native/probe.jsx` and `tests/esstr-accel-live-smoke.jsx` in Illustrator before release; ExternalObject binding is per-DLL-build.
 
 ---
 

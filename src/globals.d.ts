@@ -17,3 +17,5 @@ declare var $: {
 };
 
 declare var ExternalObject: any;
+declare var ESCHARS_ACCEL_BUNDLE: string;
+declare var global: any;
