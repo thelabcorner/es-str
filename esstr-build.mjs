@@ -198,7 +198,7 @@ function buildAccel() {
   }
   var esstrScratchBundle = join(DIST, '.esstr-trim-scratch.jsx');
   var esstrManifest = join(DIST, '.ESSTRTrim.manifest.json');
-  execFileSync(process.execPath, [espackBuild, '--embed', dll, '--out', esstrScratchBundle,
+  execFileSync(process.execPath, [espackBuild, '--embed', dll, '--accel-version', '2', '--out', esstrScratchBundle,
     '--name', 'esstr', '--manifest-out', esstrManifest, '--quiet'], { stdio: 'inherit' });
   var mergedLoader = join(DIST, '.esstr-merged-loader.jsx');
   var mergedManifest = join(DIST, 'ESSTR.manifest.json');
