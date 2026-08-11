@@ -27,7 +27,7 @@
 - [Why ESSTR?](#why-esstr)
 - [Features](#features)
 - [Which build should I use?](#which-build-should-i-use)
-- [Release Assets](#release-assets)
+- [Get the Release](#get-the-release)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [API](#api)
@@ -82,19 +82,28 @@ The engine makes this harder than it looks:
 
 ---
 
-## Release Assets
+## Get the Release
 
-The first GitHub release should attach these files from the exact tagged commit:
+**All production bundles ship as GitHub release assets — this repo holds sources. Grab the runnable builds from the [Releases page](https://github.com/thelabcorner/es-str/releases).**
 
-| Asset | Purpose |
-|---|---|
-| `vendor-esstr-runtime.js` | smallest drop-in polyfill runtime |
-| `vendor-esstr.js` | full drop-in polyfill with install/capability helpers |
-| `ESSTR.jsx` | full facade without the install footer |
-| `esstr-core.esm.mjs` | Node/test ESM bundle |
-| `ESSTRTrim.dll` | Windows x64 ExternalObject accelerator payload |
-| `ESSTR.accel.jsx` | self-extracting ESPACK bundle: ESSTR + `ESSTRTrim.dll` |
-| `ESSTR.accel.min.jsx` | minified self-extracting ESPACK bundle |
+[![Latest stable](https://img.shields.io/github/v/release/thelabcorner/es-str?label=Latest%20stable)](https://github.com/thelabcorner/es-str/releases/latest)
+[![Release date](https://img.shields.io/github/release-date/thelabcorner/es-str?label=Released)](https://github.com/thelabcorner/es-str/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/thelabcorner/es-str/total?label=Downloads)](https://github.com/thelabcorner/es-str/releases)
+
+1. Open the [Releases page](https://github.com/thelabcorner/es-str/releases).
+2. Download the asset that matches your runtime.
+3. Include or eval the file from your script; use the DLL only through the accelerated bundle unless you are testing the native boundary directly.
+
+| You are... | Take this release | And this asset |
+|---|---|---|
+| Injecting trim methods into short-lived COM evals | Latest stable | `vendor-esstr-runtime.js` |
+| Writing a normal ExtendScript script | Latest stable | `vendor-esstr.js` |
+| Importing the facade without prototype install | Latest stable | `ESSTR.jsx` |
+| Running Node-side tests or tooling | Latest stable | `esstr-core.esm.mjs` |
+| Using the self-extracting native lane on Windows x64 | Latest stable | `ESSTR.accel.jsx` or `ESSTR.accel.min.jsx` |
+| Testing the ExternalObject boundary directly | Latest stable | `ESSTRTrim.dll` + `native/probe.jsx` |
+
+> **Rule of thumb: start with the latest stable tag.** Every release asset is produced by `npm run build`, `npm run native-build`, and `npm run build:accel` from the exact tagged commit. Releases follow [SemVer](https://semver.org/); watch the repository → *Releases* to get notified.
 
 ---
 
