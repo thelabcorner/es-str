@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.idea/
+*.log
+__pycache__/
+*.pyc
+tests/.esstr-test.bundle.mjs
+tests/.esstr-fuzz.bundle.mjs
+tests/.esstr-callbacks.bundle.mjs
+tests/.esstr-vectors.bundle.mjs
+native/bin/
+native/*.obj

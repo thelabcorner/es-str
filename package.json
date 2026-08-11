@@ -1,0 +1,81 @@
+{
+  "name": "esstr",
+  "version": "1.0.0",
+  "description": "ESSTR — String whitespace methods (trim/trimLeft/trimRight/trimStart/trimEnd) for Adobe ExtendScript (ES3), engine-measured and spec-exact",
+  "type": "module",
+  "main": "dist/esstr-core.esm.mjs",
+  "scripts": {
+    "build": "node esstr-build.mjs",
+    "build:accel": "node esstr-build.mjs --accel",
+    "native-build": "powershell -ExecutionPolicy Bypass -File native/build.ps1",
+    "native-verify": "node native/verify-accel-dll.mjs",
+    "native-parity": "node native/trim-parity.mjs",
+    "test": "node tests/esstr-test.mjs && node native/trim-parity.mjs && node esstr-vendor-sync.mjs --check --quiet",
+    "typecheck": "npx tsc --noEmit -p .",
+    "fuzz": "node tests/fuzz.mjs",
+    "benchmark": "node tests/benchmark.mjs",
+    "live-verify": "node tests/esstr-live-verify.mjs",
+    "vendor-sync": "node esstr-vendor-sync.mjs",
+    "vendor-sync-check": "node esstr-vendor-sync.mjs --check",
+    "prepublishOnly": "npm run build && npm run native-build && npm run build:accel && npm run vendor-sync-check"
+  },
+  "files": [
+    "dist/ESSTR.jsx",
+    "dist/vendor-esstr.js",
+    "dist/vendor-esstr-runtime.js",
+    "dist/esstr-core.esm.mjs",
+    "dist/ESSTR.accel.jsx",
+    "dist/ESSTR.accel.min.jsx",
+    "dist/ESSTR.facade.jsx",
+    "dist/ESSTR.manifest.json",
+    "native/SoSharedLibDefs.h",
+    "native/esstr_string.c",
+    "native/build.ps1",
+    "native/probe.jsx",
+    "native/verify-accel-dll.mjs",
+    "native/trim-parity.mjs",
+    "native/trim-test.c",
+    "esstr-vendor-sync.mjs",
+    "native/bin/ESSTRTrim.dll",
+    "src/",
+    "tests/benchmark.mjs",
+    "tests/callbacks.ts",
+    "tests/esstr-live-verify.mjs",
+    "tests/esstr-accel-live-smoke.jsx",
+    "tests/esstr-test-entry.ts",
+    "tests/esstr-test.mjs",
+    "tests/fuzz-entry.ts",
+    "tests/fuzz.mjs",
+    "tests/globals.d.ts",
+    "tests/vectors.ts",
+    "esstr-build.mjs",
+    "README.md",
+    "RELEASE_NOTES-v1.0.0.md",
+    "LICENSE",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "typescript": "^5.8.3",
+    "esarr": "file:../esarr"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thelabcorner/es-str.git"
+  },
+  "keywords": [
+    "string",
+    "trim",
+    "trimLeft",
+    "trimRight",
+    "polyfill",
+    "extendscript",
+    "es3",
+    "illustrator"
+  ]
+}
