@@ -116,7 +116,7 @@ The engine makes this harder than it looks:
 | | **Runtime build** | **Full build** | **Accelerated build** |
 |---|---|---|---|
 | Files | `vendor-esstr-runtime.js` | `vendor-esstr.js`, `ESSTR.jsx` | `ESSTR.accel.jsx`, `ESSTR.accel.min.jsx`, `ESSTRTrim.dll` |
-| Size | 8.0 KB | 14.8 KB / 13.9 KB | 211.0 KB / 180.8 KB / 3.1 KB |
+| Size | 8.0 KB | 17.0 KB / 16.3 KB | 211.0 KB / 180.8 KB / 3.1 KB |
 | API | the 5 methods | methods + `capabilities()`, `install()`, `benchmark()` | full API + `enableNativeGate()`, `disableNativeGate()`, `nativeGateStatus()`, `useEspack()` |
 | Installs `String.prototype.*` | yes (gap-fill) | yes (gap-fill) | yes (gap-fill) |
 | Best for | per-eval injection, scripts that only need trim | libraries that want install control or capability census | Windows x64 scripts that want a self-extracting native lane for long strings |
@@ -247,11 +247,13 @@ Measured live in Adobe Illustrator 30.6.0 / ExtendScript 4.5.6, best-of-9 primed
 
 Build it with `npm run native-build && npm run build:accel` after building the sibling ESCHARS accel (`npm run build:native && npm run build:accel` in `../eschars`). Run `native/probe.jsx` and `tests/esstr-accel-live-smoke.jsx` in Illustrator before release; ExternalObject binding is per-DLL-build.
 
+**Measured v1.1.0 trim delta vs v1.0.0:** no trim throughput increase. Live benchmark in Illustrator 30.6.0 / ExtendScript 4.5.6 showed memo-hit repeat time unchanged at 3 µs, while 40-fresh-string totals moved from 156–159 µs (v1.0.0 release asset) to 158–160 µs (v1.1.0 working tree), a ~0–1.3% loss within microbenchmark noise. The v1.1.0 value is packaging/composition: ESSTR and ESCHARS share one ESPACK loader and one `ESB64Native` decoder, and scripts that also need ESCHARS byte-unit operations get that facade from the same accel bundle. ESSTR trim speed remains governed by `ESSTRTrim.dll` or the pure ES3 scanner fallback.
+
 ---
 
 ## Security Model
 
-The default ESSTR builds are pure data-transform libraries: plain function definitions installed onto `String.prototype`. No network access and no document mutation. The accelerated build adds a Windows x64 `ExternalObject` DLL and writes the extracted DLL to ESPACK's local cache before loading it. The only override surface is deliberate: `install({ forceReplace: true })` replaces an existing native implementation; the default gap-fill install leaves natives untouched.
+The default ESSTR builds are pure data-transform libraries: plain function definitions installed onto `String.prototype`. No network access and no document mutation. The accelerated build evals only bundled facades that ESSTR ships (`ESSTR`, merged `ESCHARS`, and ESPACK loader code), writes extracted DLL payloads to ESPACK's local cache, then loads them through `ExternalObject`. The ES3 lane never depends on native lanes: native load, binding, or call failure falls back to the pure scanner. The only override surface is deliberate: `install({ forceReplace: true })` replaces an existing native implementation; the default gap-fill install leaves natives untouched.
 
 ---
 

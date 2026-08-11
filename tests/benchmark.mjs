@@ -14,8 +14,8 @@ import * as ESARR from 'esarr';
 var ROOT = dirname(fileURLToPath(import.meta.url));
 var PROJECT = join(ROOT, '..');
 var DIST = join(PROJECT, 'dist');
-var VENDOR = join(DIST, 'vendor-esstr.js');
-var TOOL = 'C:/Program Files/Adobe/Adobe Illustrator 2026/Presets/en_US/Scripts/agent-skills/illustrator-com-automation-skill/scripts/ILLUSTRATOR_COM_TOOL.py';
+var VENDOR = process.env.ESSTR_VENDOR_PATH || join(DIST, 'vendor-esstr.js');
+var TOOL = 'C:/Program Files/Adobe/Adobe Illustrator 2026/Presets/en_US/Scripts/agent-skills/illustrator-com-automation-skill/comtool/ILLUSTRATOR_COM_TOOL.py';
 
 if (!existsSync(VENDOR)) { console.error('benchmark: build first (npm run build)'); process.exit(1); }
 if (!existsSync(TOOL)) { console.error('benchmark: COM tool not found'); process.exit(1); }
@@ -124,11 +124,11 @@ try {
 }
 var env;
 try { env = JSON.parse(pyOut.trim()); } catch (e) { console.error('benchmark: tool output not JSON: ' + pyOut.slice(0, 500)); process.exit(1); }
-if (!env.ok || !env.result || !env.result.result) {
+if (!env.ok || !env.result) {
   console.error('benchmark: tool/engine error: ' + JSON.stringify(env).slice(0, 1500));
   process.exit(1);
 }
-var report = env.result.result;
+var report = env.result.result || env.result;
 
 console.log('');
 console.log('ESSTR live benchmark — ' + report.host + ' / ExtendScript ' + report.engine + ', best-of-9 medians (us):');
