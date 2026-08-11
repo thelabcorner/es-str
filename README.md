@@ -219,11 +219,12 @@ var name2 = rawName.trim();                  // gap-filled String.prototype.trim
 | Fixed vectors + 20k differential vs Node natives | `npm test` | 20059 checks, 0 failures |
 | Seeded fuzz vs Node natives (200k iterations) | `npm run fuzz` | 0 divergences (seed 31337) |
 | Live engine parity (47 vectors + wrapper semantics) | `npm run live-verify` | 47/47 + all extras |
+| Merged accel ESCHARS fallback smoke | `npm run live-verify:accel` | ESSTRTrim first, ESCHARS fallback lazy-loads and preserves fallback gates |
 | Live benchmarks (ours vs shim regex vs hand-rolled) | `npm run benchmark` | see table |
 
 The differential oracle is Node's native `String.prototype.trim/trimLeft/trimRight/trimStart/trimEnd`; engine parity is verified by running the identical bundled code through `ILLUSTRATOR_COM_TOOL.py` (hex-transported code units so NULs and surrogates survive JSON).
 
-Native accelerator validation is layered separately: `npm run native-build` builds `native/bin/ESSTRTrim.dll`, `npm run native-verify` verifies the x64 PE header, required exports, deterministic timestamp, NX/ASLR flags, import markers, SHA-256, and ESPACK manifest payload byte identity, and `npm run build:accel` emits the ESPACK bundles. `native/probe.jsx` and `tests/esstr-accel-live-smoke.jsx` verify the DLL and self-extracting bundle in Illustrator.
+Native accelerator validation is layered separately: `npm run native-build` builds `native/bin/ESSTRTrim.dll`, `npm run native-verify` verifies the x64 PE header, required exports, deterministic timestamp, NX/ASLR flags, import markers, SHA-256, and ESPACK manifest payload byte identity, and `npm run build:accel` emits the ESPACK bundles. `native/probe.jsx`, `tests/esstr-accel-live-smoke.jsx`, and `npm run live-verify:accel` verify the DLL, self-extracting bundle, and ESCHARS fallback route in Illustrator.
 
 ---
 

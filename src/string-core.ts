@@ -32,6 +32,7 @@
 //     objects coerce; null/undefined throw TypeError (matching Node). The
 //     facade therefore guards null/undefined and ToStrings its argument.
 import { nativeTrim } from './native-lane';
+import { escharsTrim } from './eschars-lane';
 
 var MEMO_MAX_LEN = 256;
 var MEMO_LIMIT = 8;
@@ -79,6 +80,10 @@ export function trim(s: any): string {
   if (nr !== void 0) {
     return nr;
   }
+  nr = escharsTrim(s, 0);
+  if (nr !== void 0) {
+    return nr;
+  }
   if (len <= MEMO_MAX_LEN) {
     var hit = memoRead(trimMemo, s);
     if (hit !== void 0) {
@@ -102,6 +107,10 @@ export function trimLeft(s: any): string {
   if (nr !== void 0) {
     return nr;
   }
+  nr = escharsTrim(s, 1);
+  if (nr !== void 0) {
+    return nr;
+  }
   if (len <= MEMO_MAX_LEN) {
     var hit = memoRead(leftMemo, s);
     if (hit !== void 0) {
@@ -122,6 +131,10 @@ export function trimRight(s: any): string {
     return s;
   }
   var nr = nativeTrim(s, 2);
+  if (nr !== void 0) {
+    return nr;
+  }
+  nr = escharsTrim(s, 2);
   if (nr !== void 0) {
     return nr;
   }
