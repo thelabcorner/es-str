@@ -25,7 +25,7 @@ function globalObject(): any {
     try { return $.global; } catch (e) { /* ignore */ }
   }
   try {
-    return Function('return this')();
+    return (Function as any)('return this')();
   } catch (e2) {
     return null;
   }

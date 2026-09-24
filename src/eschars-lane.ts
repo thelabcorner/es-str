@@ -23,7 +23,7 @@ var SURROGATE_RE = /[\uD800-\uDFFF]/;
 
 function sessionGlobal(): any {
   try { if (typeof $ !== 'undefined' && $.global) { return $.global; } } catch (e) {}
-  try { return Function('return this')(); } catch (e2) { return null; }
+  try { return (Function as any)('return this')(); } catch (e2) { return null; }
 }
 
 function surfaceComplete(f: any): boolean {
@@ -59,44 +59,11 @@ function resolveEschars(): any {
     }
   } catch (e1) {}
 
-  if (typeof ESCHARS_ACCEL_BUNDLE === 'string' && ESCHARS_ACCEL_BUNDLE.length > 0) {
-    try {
-      var dollar = (typeof $ !== 'undefined') ? $ : null;
-      var stagedDollar = false;
-      var savedGlobal = dollar ? dollar.global : null;
-      var publishTarget = savedGlobal || sg;
-      if (!publishTarget && typeof global !== 'undefined') {
-        publishTarget = global;
-      }
-      if (publishTarget) {
-        if (dollar) {
-          try { dollar.global = publishTarget; } catch (e2) {}
-        } else if (typeof global !== 'undefined') {
-          try { global.$ = { global: publishTarget }; dollar = global.$; stagedDollar = true; } catch (e3) {}
-        }
-      }
-      (0, eval)(ESCHARS_ACCEL_BUNDLE);
-      if (publishTarget && surfaceComplete(publishTarget.ESCHARS)) {
-        escharsFacade = publishTarget.ESCHARS;
-        escharsReason = 'embedded';
-      } else if (surfaceComplete((sessionGlobal() || {}).ESCHARS)) {
-        escharsFacade = (sessionGlobal() || {}).ESCHARS;
-        escharsReason = 'embedded-global';
-      } else {
-        escharsReason = 'embedded surface incomplete';
-      }
-      if (stagedDollar && typeof global !== 'undefined') {
-        try { delete global.$; } catch (e4) { try { global.$ = undefined; } catch (e5) {} }
-      } else if (dollar) {
-        try { dollar.global = savedGlobal; } catch (e6) {}
-      }
-    } catch (e7) {
-      escharsFacade = null;
-      escharsReason = 'embedded eval failed: ' + String(e7);
-    }
-  } else {
-    escharsReason = 'no embedded bundle';
-  }
+  // No embedded-bundle eval lane: the CURRENT ESCHARS facade is resolved from
+  // $.global (merged composites append it after the shared ESPAK loader) or
+  // through ESPAK.load("ESChars") in resolveEscharsTrimLib(). Staging $.global
+  // or eval-ing a stale bundle string is intentionally not supported.
+  escharsReason = 'no ESCHARS facade on $.global';
   return escharsFacade;
 }
 

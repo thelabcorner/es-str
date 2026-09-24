@@ -7,6 +7,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$esabiInclude = Join-Path $here "..\deps\esabi\include"
+if (-not (Test-Path (Join-Path $esabiInclude "esabi\esabi.h"))) {
+    throw "ESABI dependency missing. Run: git submodule update --init --recursive"
+}
 
 function Find-VsDevCmd {
     $candidates = @(
@@ -54,26 +58,26 @@ if ($clang -and $lld -and (Test-Path $clang) -and (Test-Path $lld)) {
     Write-Output "ESSTRTrim build: clang+lld (freestanding, x86-64-v2, deterministic)"
     & $clang --target=x86_64-pc-windows-msvc -O3 -ffast-math -ffreestanding `
         -fno-stack-protector -mno-stack-arg-probe -fno-builtin `
-        -march=x86-64-v2 -mtune=generic -flto @incPaths -c "$src" -o "$obj"
+        -march=x86-64-v2 -mtune=generic -flto "-I$esabiInclude" @incPaths -c "$src" -o "$obj"
     if ($LASTEXITCODE -ne 0) { throw "clang failed with exit $LASTEXITCODE" }
     & $lld -flavor link /dll /entry:DllMain /subsystem:windows /nodefaultlib `
         /machine:x64 /timestamp:0 /out:"$out" "$obj" @libPaths kernel32.lib
     if ($LASTEXITCODE -ne 0) { throw "lld failed with exit $LASTEXITCODE" }
     & $clang --target=x86_64-pc-windows-msvc -O2 -ffreestanding `
         -fno-stack-protector -mno-stack-arg-probe -fno-builtin `
-        -march=x86-64-v2 -mtune=generic @incPaths -c "$testSrc" -o "$testObj"
+        -march=x86-64-v2 -mtune=generic "-I$esabiInclude" @incPaths -c "$testSrc" -o "$testObj"
     if ($LASTEXITCODE -ne 0) { throw "clang test failed with exit $LASTEXITCODE" }
     & $lld -flavor link /entry:mainCRTStartup /subsystem:console /nodefaultlib `
         /machine:x64 /timestamp:0 /out:"$testOut" "$testObj" @libPaths kernel32.lib
     if ($LASTEXITCODE -ne 0) { throw "lld test failed with exit $LASTEXITCODE" }
 } elseif (Get-Command cl -ErrorAction SilentlyContinue) {
     Write-Output "ESSTRTrim build: MSVC fallback (freestanding, /nodefaultlib)"
-    & cl /nologo /O2 /GS- /c "$src" /Fo:"$obj"
+    & cl /nologo /O2 /GS- /I"$esabiInclude" /c "$src" /Fo:"$obj"
     if ($LASTEXITCODE -ne 0) { throw "cl failed with exit $LASTEXITCODE" }
     & link /dll /nodefaultlib /entry:DllMain /subsystem:windows /machine:x64 `
         /Brepro /out:"$out" "$obj" @libPaths kernel32.lib
     if ($LASTEXITCODE -ne 0) { throw "link failed with exit $LASTEXITCODE" }
-    & cl /nologo /O2 /GS- /c "$testSrc" /Fo:"$testObj"
+    & cl /nologo /O2 /GS- /I"$esabiInclude" /c "$testSrc" /Fo:"$testObj"
     if ($LASTEXITCODE -ne 0) { throw "cl test failed with exit $LASTEXITCODE" }
     & link /nodefaultlib /entry:mainCRTStartup /subsystem:console /machine:x64 `
         /Brepro /out:"$testOut" "$testObj" @libPaths kernel32.lib

@@ -155,7 +155,9 @@ writeFileSync(probePath, probeSrc);
 console.log('live-verify: running ' + vectors.length + ' vectors in Illustrator...');
 var pyOut;
 try {
-  pyOut = execFileSync('python', [TOOL, 'eval', '--file', probePath.replace(/\\/g, '/')], {
+  // --launch attaches to a running instance and only starts Illustrator when
+  // none exists; it never kills or restarts a live session.
+  pyOut = execFileSync('python', [TOOL, 'eval', '--file', probePath.replace(/\\/g, '/'), '--launch'], {
     encoding: 'utf8', timeout: 300000
   });
 } catch (e) {

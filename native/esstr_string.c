@@ -1,8 +1,7 @@
 /***************************************************************************
  * ESSTRTrim — ExternalObject accelerator for ESSTR trim methods.
  *
- * Direct-interface ABI:
- *   long fn(TaggedData* argv, long argc, TaggedData* retval)
+ * Direct-interface ABI: pinned ESABI v0.3.0 via ESABI_DIRECT_FUNCTION(name)
  * Returned strings are UTF-8, allocated with HeapAlloc and released by
  * ESFreeMem. Negative error codes are never returned.
  *
@@ -15,9 +14,8 @@
  ***************************************************************************/
 
 #include <stddef.h>
-#include "SoSharedLibDefs.h"
+#include <esabi/esabi.h>
 
-#define ESSTR_API __declspec(dllexport)
 #define WINAPI __stdcall
 
 typedef void* HANDLE;
@@ -99,13 +97,13 @@ static size_t trailing_ws_len(const unsigned char* s, size_t start, size_t end)
     return 0;
 }
 
-static long trim_impl(TaggedData* argv, long argc, TaggedData* retval, int mode)
+static esabi_error trim_impl(esabi_value* argv, esabi_long argc, esabi_value* retval, int mode)
 {
     const char* in;
     const unsigned char* u;
     size_t len, st, en, n;
-    if (argc < 1 || argv[0].type != kTypeString || !argv[0].data.string) return kESErrBadArgumentList;
-    in = argv[0].data.string;
+    if (argc < 1 || argv[0].type != ESABI_TYPE_STRING || !argv[0].payload.string_value) return ESABI_ERR_BAD_ARGUMENTS;
+    in = argv[0].payload.string_value;
     u = (const unsigned char*)in;
     len = esstr_strlen(in);
     st = 0;
@@ -116,42 +114,45 @@ static long trim_impl(TaggedData* argv, long argc, TaggedData* retval, int mode)
     if (mode != 1) {
         while ((n = trailing_ws_len(u, st, en)) != 0) en -= n;
     }
-    retval->type = kTypeString;
-    retval->data.string = esstr_dup_range(in, st, en);
-    if (!retval->data.string) return 10003;
-    return kESErrOK;
+    {
+        char* out = esstr_dup_range(in, st, en);
+        if (!out) return 10003;
+        esabi_value_set_string(retval, out);
+    }
+    return ESABI_OK;
 }
 
-ESSTR_API long trim(TaggedData* argv, long argc, TaggedData* retval) { return trim_impl(argv, argc, retval, 0); }
-ESSTR_API long trimLeft(TaggedData* argv, long argc, TaggedData* retval) { return trim_impl(argv, argc, retval, 1); }
-ESSTR_API long trimRight(TaggedData* argv, long argc, TaggedData* retval) { return trim_impl(argv, argc, retval, 2); }
+ESABI_DIRECT_FUNCTION(trim) { return trim_impl(argv, argc, retval, 0); }
+ESABI_DIRECT_FUNCTION(trimLeft) { return trim_impl(argv, argc, retval, 1); }
+ESABI_DIRECT_FUNCTION(trimRight) { return trim_impl(argv, argc, retval, 2); }
 
-ESSTR_API long ping(TaggedData* argv, long argc, TaggedData* retval)
+ESABI_DIRECT_FUNCTION(ping)
 {
     (void)argv; (void)argc;
-    retval->type = kTypeInteger;
-    retval->data.intval = 42;
-    return kESErrOK;
+    esabi_value_set_i32(retval, 42);
+    return ESABI_OK;
 }
 
-ESSTR_API long version(TaggedData* argv, long argc, TaggedData* retval)
+ESABI_DIRECT_FUNCTION(version)
 {
     (void)argv; (void)argc;
-    retval->type = kTypeString;
-    retval->data.string = esstr_dup_range("ESSTRTrim/1", 0, 11);
-    if (!retval->data.string) return 10003;
-    return kESErrOK;
+    {
+        char* out = esstr_dup_range("ESSTRTrim/1", 0, 11);
+        if (!out) return 10003;
+        esabi_value_set_string(retval, out);
+    }
+    return ESABI_OK;
 }
 
-ESSTR_API char* ESInitialize(TaggedData* argv, long argc)
+ESABI_INITIALIZE_FUNCTION
 {
     (void)argv; (void)argc;
     return "trim_s,trimLeft_s,trimRight_s,ping_d,version_s";
 }
 
-ESSTR_API long ESGetVersion(void) { return 1; }
-ESSTR_API void ESFreeMem(void* p) { if (p) HeapFree(GetProcessHeap(), 0, p); }
-ESSTR_API void ESTerminate(void) { }
+ESABI_VERSION_FUNCTION { return 1; }
+ESABI_FREE_FUNCTION { if (pointer) HeapFree(GetProcessHeap(), 0, pointer); }
+ESABI_TERMINATE_FUNCTION { }
 
 BOOL WINAPI DllMain(void* hinst, unsigned long reason, void* reserved)
 {

@@ -11,7 +11,7 @@
 [![Engine parity: live](https://img.shields.io/badge/engine%20parity-live%2047%2F47%20vectors-green)](https://extendscript.docsforadobe.dev/)
 [![Adobe: Creative Suite](https://img.shields.io/badge/Adobe%20-Creative%20Suite-red?logo=adobe&logoColor=white)](https://extendscript.docsforadobe.dev/)
 [![Engine](https://img.shields.io/badge/ExtendScript-ES3-green)](#compatibility)
-[![Size](https://img.shields.io/badge/runtime-8.0%20KB-orange)](#installation)
+[![Size](https://img.shields.io/badge/runtime-13.9%20KB-orange)](#installation)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL%203.0--or--later-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 </div>
@@ -118,7 +118,7 @@ The engine makes this harder than it looks:
 - **ToString semantics, exactly like Node**: `trim.call(123)` → `'123'`, `trim.call(new String(' x '))` → `'x'`; `null`/`undefined` throw `TypeError` (the facade guards them — the engine's own ES3 `.call(null)` semantics bind the global object, a documented engine quirk).
 - **Never mangles data**: NULs and lone surrogates at the edges survive (the scan is code-unit based; `substring` is used for the result, never `charAt`).
 - **True polyfill install**: gap-fills `String.prototype.trim/trimLeft/trimRight/trimStart/trimEnd` only when absent; `install({ forceReplace: true })` overrides. The `ESSTR` facade (pure functions) is always available.
-- **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 8.0 KB, methods only) for per-eval injection.
+- **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 13.9 KB, methods only) for per-eval injection.
 - **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. The accel bundle is merge-composed with ESCHARS (`ESChars.dll`) through `espack-merge`, so ESSTR and ESCHARS share one ESPACK loader and one `ESB64Native` decoder instead of nested bundles. The pure ES3 scanner stays the fallback and semantic authority.
 
 ---
@@ -128,7 +128,7 @@ The engine makes this harder than it looks:
 | | **Runtime build** | **Full build** | **Accelerated build** |
 |---|---|---|---|
 | Files | `vendor-esstr-runtime.js` | `vendor-esstr.js`, `ESSTR.jsx` | `ESSTR.accel.jsx`, `ESSTR.accel.min.jsx`, `ESSTRTrim.dll` |
-| Size | 8.0 KB | 17.0 KB / 16.3 KB | 211.0 KB / 180.8 KB / 3.1 KB |
+| Size | 13.9 KB | 20.2 KB / 19.5 KB | 245.7 KB / 214.1 KB / 3.0 KB |
 | API | the 5 methods | methods + `capabilities()`, `install()`, `benchmark()` | full API + `enableNativeGate()`, `disableNativeGate()`, `nativeGateStatus()`, `useEspack()` |
 | Installs `String.prototype.*` | yes (gap-fill) | yes (gap-fill) | yes (gap-fill) |
 | Best for | per-eval injection, scripts that only need trim | libraries that want install control or capability census | Windows x64 scripts that want a self-extracting native lane for long strings |
@@ -299,6 +299,7 @@ All measured live on ExtendScript 4.5.6 (Illustrator 30.6.0); re-probe other hos
 ## Development
 
 ```bash
+git submodule update --init --recursive   # pins ESABI v0.3.0 for the native ABI
 npm install            # esbuild + typescript (+ esarr devDependency, dogfooded in the harnesses)
 npm run build          # dist/ESSTR.jsx, vendor-esstr.js, vendor-esstr-runtime.js, esstr-core.esm.mjs
 npm run native-build   # native/bin/ESSTRTrim.dll (Windows x64 toolchain)
@@ -317,6 +318,7 @@ The identical TypeScript core (`src/string-core.ts`) ships as an ESM bundle for 
 
 ```
 esstr/
+  deps/esabi/     pinned ESABI v0.3.0 submodule; sole ExternalObject ABI authority
   src/            TypeScript core (string-core.ts shared by both bundles), runtime, types
   native/         ESSTRTrim.dll source, build script, ExternalObject probe
   tests/          vectors.ts + callbacks.ts + Node harnesses (custom, no framework) + fuzz
@@ -330,6 +332,7 @@ esstr/
 ESSTR stands on the shoulders of the ExtendScript community:
 
 - **[docsforadobe](https://github.com/docsforadobe) and the docsforadobe.dev community:** maintainers of the de-facto reference documentation for the ExtendScript runtime. Their reverse-engineering of the engine's string semantics and parser quirks made the measured findings in this README possible to write down at all.
+- **[ESABI](https://github.com/thelabcorner/esabi):** the MIT-licensed ExternalObject ABI declaration used by the native trim accelerator; ESSTR no longer ships its own ABI header.
 - **The ECMAScript spec (modern trim):** the WhiteSpace + LineTerminator definition this library implements exactly.
 - **The ESON/ESB64 family:** the LRU-memo pattern, `charCodeAt` scanning discipline and esbuild-quirk handling carry over directly; harness bookkeeping dogfoods esarr.
 
@@ -337,7 +340,7 @@ ESSTR stands on the shoulders of the ExtendScript community:
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE). The pinned `deps/esabi` dependency is MIT-licensed under its own [LICENSE](deps/esabi/LICENSE).
 
 ---
 

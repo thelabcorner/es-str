@@ -2,11 +2,11 @@
  * ESSTRTrim local ABI self-test.
  *
  * No Illustrator required: LoadLibrary/GetProcAddress drives the built DLL
- * through the same TaggedData ABI that ExternalObject uses. Exits 0 on pass;
+ * through the same pinned ESABI v0.3.0 contract that ExternalObject uses. Exits 0 on pass;
  * otherwise exits with a small nonzero code identifying the failed vector.
  ***************************************************************************/
 
-#include "SoSharedLibDefs.h"
+#include <esabi/esabi.h>
 
 #define WINAPI __stdcall
 
@@ -19,8 +19,8 @@ __declspec(dllimport) void* WINAPI GetProcAddress(HMODULE hModule, const char* l
 __declspec(dllimport) BOOL WINAPI FreeLibrary(HMODULE hLibModule);
 __declspec(dllimport) void WINAPI ExitProcess(unsigned int uExitCode);
 
-typedef long (*EsFn)(TaggedData* argv, long argc, TaggedData* retval);
-typedef void (*EsFreeMemFn)(void* p);
+typedef esabi_error (ESABI_CALL *EsFn)(esabi_value* argv, esabi_long argc, esabi_value* retval);
+typedef void (ESABI_CALL *EsFreeMemFn)(void* p);
 
 __attribute__((used)) unsigned int _fltused = 0;
 
@@ -39,33 +39,27 @@ static int c_streq(const char* a, const char* b)
 
 static int call_string(EsFn fn, EsFreeMemFn free_mem, const char* in, const char* expect)
 {
-    TaggedData argv[1];
-    TaggedData ret;
+    esabi_value argv[1];
+    esabi_value ret;
     long err;
-    argv[0].type = kTypeString;
-    argv[0].filler = 0;
-    argv[0].data.string = (char*)in;
-    ret.type = kTypeUndefined;
-    ret.filler = 0;
-    ret.data.string = (char*)0;
+    esabi_value_set_string(&argv[0], (char*)in);
+    esabi_value_set_undefined(&ret);
     err = fn(argv, 1, &ret);
-    if (err != kESErrOK) return 0;
-    if (ret.type != kTypeString || !ret.data.string) return 0;
-    if (!c_streq(ret.data.string, expect)) {
-        free_mem(ret.data.string);
+    if (err != ESABI_OK) return 0;
+    if (ret.type != ESABI_TYPE_STRING || !ret.payload.string_value) return 0;
+    if (!c_streq(ret.payload.string_value, expect)) {
+        free_mem(ret.payload.string_value);
         return 0;
     }
-    free_mem(ret.data.string);
+    free_mem(ret.payload.string_value);
     return 1;
 }
 
 static int bad_arg_returns_type_error(EsFn fn)
 {
-    TaggedData ret;
-    ret.type = kTypeUndefined;
-    ret.filler = 0;
-    ret.data.string = (char*)0;
-    return fn((TaggedData*)0, 0, &ret) == kESErrBadArgumentList;
+    esabi_value ret;
+    esabi_value_set_undefined(&ret);
+    return fn((esabi_value*)0, 0, &ret) == ESABI_ERR_BAD_ARGUMENTS;
 }
 
 void mainCRTStartup(void)
@@ -77,8 +71,8 @@ void mainCRTStartup(void)
     EsFn ping;
     EsFn version;
     EsFreeMemFn free_mem;
-    TaggedData argv[1];
-    TaggedData ret;
+    esabi_value argv[1];
+    esabi_value ret;
 
     (void)c_strlen;
     dll = LoadLibraryA("native\\bin\\ESSTRTrim.dll");
@@ -93,13 +87,9 @@ void mainCRTStartup(void)
     free_mem = (EsFreeMemFn)GetProcAddress(dll, "ESFreeMem");
     if (!trim || !trimLeft || !trimRight || !ping || !version || !free_mem) ExitProcess(11);
 
-    argv[0].type = kTypeDouble;
-    argv[0].data.fltval = 0.0;
-    argv[0].filler = 0;
-    ret.type = kTypeUndefined;
-    ret.data.intval = 0;
-    ret.filler = 0;
-    if (ping(argv, 1, &ret) != kESErrOK || ret.type != kTypeInteger || ret.data.intval != 42) ExitProcess(12);
+    esabi_value_set_double(&argv[0], 0.0);
+    esabi_value_set_undefined(&ret);
+    if (ping(argv, 1, &ret) != ESABI_OK || ret.type != ESABI_TYPE_INTEGER || ret.payload.signed_value != 42) ExitProcess(12);
 
     if (!call_string(version, free_mem, "", "ESSTRTrim/1")) ExitProcess(13);
     if (!call_string(trim, free_mem, " \t\r\nabc\xEF\xBB\xBF", "abc")) ExitProcess(14);
