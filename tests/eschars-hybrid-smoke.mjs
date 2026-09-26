@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // Live smoke for the ESSTR -> ESCHARS native trim fallback.
 // Exercises the real merged ESSTR.accel.jsx bundle.
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createLegacyComToolV2Runner } from '../../extendscript-toolchain/src/comtool-v2-compat.mjs';
 
 var ROOT = dirname(fileURLToPath(import.meta.url));
 var PROJECT = join(ROOT, '..');
 var ACCEL = join(PROJECT, 'dist', 'ESSTR.accel.jsx');
-var TOOL = 'C:/Program Files/Adobe/Adobe Illustrator 2026/Presets/en_US/Scripts/agent-skills/illustrator-com-automation-skill/comtool/ILLUSTRATOR_COM_TOOL.py';
+var COM = createLegacyComToolV2Runner();
+process.on('exit', function () { try { COM.close(); } catch (ignore) {} });
 
 if (!existsSync(ACCEL)) { console.error('hybrid-smoke: build first (npm run build:accel)'); process.exit(1); }
-if (!existsSync(TOOL)) { console.error('hybrid-smoke: COM tool missing: ' + TOOL); process.exit(1); }
 
 var probeDir = join(process.env.TEMP || '', 'esstr-hybrid-smoke');
 mkdirSync(probeDir, { recursive: true });
@@ -81,8 +81,10 @@ var src = [
 ].join('\n');
 writeFileSync(probePath, src, 'utf8');
 
-var pyOut = execFileSync('python', [TOOL, 'eval', '--file', probePath.replace(/\\/g, '/'), '--launch'], { encoding: 'utf8', timeout: 300000 });
-var env = JSON.parse(pyOut.trim());
+var env = COM.run(
+  ['eval', '--file', probePath.replace(/\\/g, '/'), '--launch'],
+  { timeoutMs: 300000 }
+);
 if (!env.ok) { console.error('hybrid-smoke: COM error: ' + JSON.stringify(env).slice(0, 1500)); process.exit(1); }
 var report = env.result && env.result.result ? env.result.result : env.result;
 var bad = (report.checks || []).filter(function (c) { return !c.ok; });

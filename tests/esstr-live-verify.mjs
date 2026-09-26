@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ESSTR live verification: runs the shared vector battery inside the REAL
-// Adobe engine through ILLUSTRATOR_COM_TOOL.py and compares each engine
+// Adobe engine through COM Tool V2 and compares each engine
 // result against the Node-side core (which npm test has already validated
 // against Node's native String trim methods). Strings are hex-transported
 // (code units) so NULs/surrogates survive JSON untouched.
@@ -8,19 +8,17 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createLegacyComToolV2Runner } from '../../extendscript-toolchain/src/comtool-v2-compat.mjs';
 
 var ROOT = dirname(fileURLToPath(import.meta.url));
 var PROJECT = join(ROOT, '..');
 var DIST = join(PROJECT, 'dist');
 var VENDOR = join(DIST, 'vendor-esstr.js');
-var TOOL = 'C:/Program Files/Adobe/Adobe Illustrator 2026/Presets/en_US/Scripts/agent-skills/illustrator-com-automation-skill/comtool/ILLUSTRATOR_COM_TOOL.py';
+var COM = createLegacyComToolV2Runner();
+process.on('exit', function () { try { COM.close(); } catch (ignore) {} });
 
 if (!existsSync(VENDOR)) {
   console.error('live-verify: build first (npm run build) - ' + VENDOR + ' missing');
-  process.exit(1);
-}
-if (!existsSync(TOOL)) {
-  console.error('live-verify: COM tool not found at ' + TOOL);
   process.exit(1);
 }
 
@@ -157,9 +155,10 @@ var pyOut;
 try {
   // --launch attaches to a running instance and only starts Illustrator when
   // none exists; it never kills or restarts a live session.
-  pyOut = execFileSync('python', [TOOL, 'eval', '--file', probePath.replace(/\\/g, '/'), '--launch'], {
-    encoding: 'utf8', timeout: 300000
-  });
+  pyOut = COM.runText(
+    ['eval', '--file', probePath.replace(/\\/g, '/'), '--launch'],
+    { timeoutMs: 300000 }
+  );
 } catch (e) {
   console.error('live-verify: COM tool failed: ' + String((e.stdout || e.message) + '').slice(0, 2000));
   process.exit(1);
