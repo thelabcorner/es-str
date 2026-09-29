@@ -189,7 +189,7 @@ The engine makes this harder than it looks:
 | Importing the facade without prototype install | Latest stable | `ESSTR.jsx` |
 | Running Node-side tests or tooling | Latest stable | `esstr-core.esm.mjs` |
 | Using the self-extracting native lane on Windows x64 | Latest stable | `ESSTR.accel.jsx` or `ESSTR.accel.min.jsx` (merged ESSTRTrim + ESCHARS payloads) |
-| Testing the ExternalObject boundary directly | Latest stable | `ESSTRTrim.dll` + `native/probe.jsx` |
+| Testing the ExternalObject boundary directly | Latest stable | `ESSTRTrim.dll` (the `native/probe.jsx` harness lives in the repository, not the Release) |
 
 > **Rule of thumb: start with the latest stable tag.** Every release asset is produced by `npm run build`, `npm run native-build`, and `npm run build:accel` from the exact tagged commit. Releases follow [SemVer](https://semver.org/); watch the repository → *Releases* to get notified.
 
