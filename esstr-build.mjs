@@ -27,7 +27,7 @@
 // effect:
 //   node esstr-vendor-sync.mjs              (sync dist -> skill vendor)
 //   node esstr-build.mjs --accel --vendor   (build + sync in one go)
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +40,29 @@ var ADAPTER = join(ROOT, 'tooling', 'espak-adapter.js');
 var VENDOR_DIR = join(ROOT, '..', 'agent-skills', 'illustrator-com-automation-skill', 'vendor');
 
 var WANT_VENDOR = process.argv.includes('--vendor');
+
+function resolvePython() {
+  if (process.env.ESSTR_PYTHON) return { command: process.env.ESSTR_PYTHON, prefix: [] };
+  var candidates = process.platform === 'win32'
+    ? [
+        { command: 'py.exe', prefix: ['-3'] },
+        { command: 'python.exe', prefix: [] },
+        { command: 'python3.exe', prefix: [] }
+      ]
+    : [
+        { command: 'python3', prefix: [] },
+        { command: 'python', prefix: [] }
+      ];
+  for (var i = 0; i < candidates.length; i++) {
+    var probe = spawnSync(candidates[i].command, candidates[i].prefix.concat(['--version']), {
+      cwd: ROOT,
+      stdio: 'ignore'
+    });
+    if (!probe.error && probe.status === 0) return candidates[i];
+  }
+  throw new Error('Python 3 interpreter not found; set ESSTR_PYTHON to an executable path');
+}
+var PYTHON = resolvePython();
 
 function findEsbuild() {
   if (process.env.ESBUILD_PATH && existsSync(process.env.ESBUILD_PATH)) return process.env.ESBUILD_PATH;
@@ -81,6 +104,14 @@ function estcCheck(rel) {
   execFileSync(process.execPath, [ESTC, 'check', rel, '--no-target'], { cwd: ROOT, stdio: 'inherit' });
 }
 
+function gitHead() {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  } catch (ignore) {
+    return '';
+  }
+}
+
 mkdirSync(DIST, { recursive: true });
 
 // 1. ESM core bundle (Node harnesses import this; not a shipped JSX artifact).
@@ -115,8 +146,9 @@ function minifyAccel(accelOut) {
   var bodyPath = join(DIST, '.esstr-accel-bundle.body.jsx');
   var minPath = join(DIST, '.esstr-accel-bundle.min.jsx');
   writeFileSync(bodyPath, body, 'utf8');
-  execFileSync('python', [minifyScript, '--in', bodyPath, '--config', minifyConfig,
-    '--out', minPath], { stdio: 'inherit' });
+  execFileSync(PYTHON.command, PYTHON.prefix.concat([
+    minifyScript, '--in', bodyPath, '--config', minifyConfig, '--out', minPath
+  ]), { stdio: 'inherit' });
   var minBody = readFileSync(minPath, 'utf8');
   var minOut = (banner ? banner + '\n' : '') + minBody;
   var minFinal = join(DIST, 'ESSTR.accel.min.jsx');
@@ -140,52 +172,80 @@ function vendorAccel(vendorDir) {
   }
 }
 
-function buildAccel() {
+async function buildAccel() {
   var espackBuild = join(ROOT, '..', 'espack', 'espack-build.mjs');
   var espackMerge = join(ROOT, '..', 'espack', 'espack-merge.mjs');
+  var espackLibraries = join(ROOT, '..', 'espack', 'espack-libraries.mjs');
   var dll = join(ROOT, 'native', 'bin', 'ESSTRTrim.dll');
-  // Use the CURRENT ESB64 accelerator + ESTC-built runtime explicitly. The
-  // stale espack/vendor copies still carry global Object/Function.prototype
-  // shims; espack-merge requires byte-identical accel entries, and the loader
-  // must not inline a stale polyfill block into the final composite.
-  var esb64Accel = join(ROOT, '..', 'esb64', 'native', 'bin', 'ESB64Native.dll');
-  var esb64Runtime = join(ROOT, '..', 'esb64', 'dist', 'vendor-esb64-runtime.js');
   var escharsManifest = join(ROOT, '..', 'eschars', 'dist', 'ESCHARS.manifest.json');
-  var escharsFacade = join(ROOT, '..', 'eschars', 'dist', 'ESCHARS.facade.jsx');
   var missing = [];
   if (!existsSync(espackBuild)) { missing.push('espack-build.mjs (sibling espack repo)'); }
   if (!existsSync(espackMerge)) { missing.push('espack-merge.mjs (sibling espack repo)'); }
+  if (!existsSync(espackLibraries)) { missing.push('espack-libraries.mjs (sibling espack repo)'); }
   if (!existsSync(dll)) { missing.push(dll + ' (run npm run native-build)'); }
-  if (!existsSync(esb64Accel)) { missing.push(esb64Accel + ' (run npm run build:native in ../esb64)'); }
-  if (!existsSync(esb64Runtime)) { missing.push(esb64Runtime + ' (run npm run build in ../esb64)'); }
   if (!existsSync(escharsManifest)) { missing.push('eschars/dist/ESCHARS.manifest.json (run npm run build:accel in ../eschars)'); }
-  if (!existsSync(escharsFacade)) { missing.push('eschars/dist/ESCHARS.facade.jsx (run npm run build:accel in ../eschars)'); }
   if (missing.length > 0) {
-    console.error('[esstr-build] accel build requires the merged ESCHARS + ESSTR manifests; missing: ' + missing.join(', '));
+    console.error('[esstr-build] accel build requires ESPACK v2 + ESCHARS v2 inputs; missing: ' + missing.join(', '));
     process.exit(1);
   }
-  // Composition contract (do NOT embed ESCHARS.accel.jsx as a string: that
-  // would nest an ESPAK loader and double-carry ESB64Native). espack-merge
-  // combines the ESSTRTrim and ESChars manifests into ONE loader with ONE
-  // shared accel and flat payloads; the CURRENT loader-free ESCHARS facade and
-  // the ESTC-built ESSTR facade are appended, then the adapter.
-  // Both espack-build and espack-merge render the loader (each reads
-  // ESB64_RUNTIME_PATH), so pin the current ESTC-built runtime for both child
-  // processes. Inherited by execFileSync; scoped to this build process only.
-  process.env.ESB64_RUNTIME_PATH = esb64Runtime;
-  var esstrScratchBundle = join(DIST, '.esstr-trim-scratch.jsx');
-  var esstrManifest = join(DIST, '.ESSTRTrim.manifest.json');
-  execFileSync(process.execPath, [espackBuild, '--embed', dll, '--accel', esb64Accel, '--accel-version', '2', '--out', esstrScratchBundle,
-    '--name', 'esstr', '--manifest-out', esstrManifest, '--quiet'], { stdio: 'inherit' });
-  var mergedLoader = join(DIST, '.esstr-merged-loader.jsx');
-  var mergedManifest = join(DIST, 'ESSTR.manifest.json');
-  execFileSync(process.execPath, [espackMerge, '--merge', esstrManifest, escharsManifest,
-    '--out', mergedLoader, '--name', 'esstr', '--manifest-out', mergedManifest, '--quiet'], { stdio: 'inherit' });
-  var loaderText = readFileSync(mergedLoader, 'utf8');
-  var escharsFacadeText = readFileSync(escharsFacade, 'utf8');
-  var facadeText = readFileSync(join(DIST, 'ESSTR.jsx'), 'utf8');
-  var accelOut = loaderText + '\n' + escharsFacadeText + '\n' + facadeText + '\n' + adapterText +
-    '// ESSTR.accel.jsx - MERGED accel (espack-merge: ESSTRTrim + ESChars manifests -> ONE loader, ONE shared ESB64Native accel, flat payloads; ESCHARS facade + ESSTR facade appended; NO nested ESPAK bundle)\n';
+
+  var packageInfo = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  var escharsPackage = JSON.parse(readFileSync(join(ROOT, '..', 'eschars', 'package.json'), 'utf8'));
+  var buildApi = await import(new URL('../espack/espack-build.mjs', import.meta.url).href);
+  var mergeApi = await import(new URL('../espack/espack-merge.mjs', import.meta.url).href);
+  var libraries = await import(new URL('../espack/espack-libraries.mjs', import.meta.url).href);
+  var payload = readFileSync(dll);
+  var library = libraries.libraryFromFile({
+    id: 'esstr',
+    version: packageInfo.version,
+    global: 'ESSTR',
+    path: join(DIST, 'ESSTR.facade.jsx'),
+    requires: [{ id: 'eschars', range: '^' + escharsPackage.version }],
+    contract: [
+      { name: 'trim', type: 'function' },
+      { name: 'trimLeft', type: 'function' },
+      { name: 'trimRight', type: 'function' },
+      { name: 'enableNativeGate', type: 'function' },
+      { name: 'enableEschars', type: 'function' }
+    ],
+    provenance: {
+      package: packageInfo.name,
+      repository: packageInfo.repository && packageInfo.repository.url,
+      commit: gitHead(),
+      artifact: 'dist/ESSTR.facade.jsx'
+    }
+  });
+  var ownManifest = buildApi.makeManifest({
+    bundleName: 'esstr',
+    cacheDir: '',
+    payloads: [{
+      name: 'ESSTRTrim',
+      version: '1',
+      len: payload.length,
+      b64: payload.toString('base64'),
+      fileName: 'ESSTRTrim_v1.dll'
+    }],
+    accel: null,
+    libraries: [library],
+    entries: [{ id: 'esstr', range: '=' + packageInfo.version }],
+    capabilities: [{
+      id: 'esstr.native',
+      provider: 'esstr',
+      mode: 'optional',
+      payloads: ['ESSTRTrim'],
+      accel: null
+    }]
+  });
+  var composed = mergeApi.merge({
+    manifests: [escharsManifest, ownManifest],
+    out: join(DIST, 'ESSTR.accel.jsx'),
+    manifestOut: join(DIST, 'ESSTR.manifest.json'),
+    name: 'esstr',
+    entries: [{ id: 'esstr', range: '=' + packageInfo.version }],
+    deferB64: true
+  });
+  var accelOut = composed.text +
+    '// ESSTR.accel.jsx - ESPACK v2 flattened ESB64 -> ESCHARS -> ESSTR composition; one loader/control plane\n';
   writeFileSync(join(DIST, 'ESSTR.accel.jsx'), accelOut);
   console.log('[esstr-build] wrote ' + join(DIST, 'ESSTR.accel.jsx') + ' (' + accelOut.length + ' bytes)');
   estcCheck('dist/ESSTR.accel.jsx');
@@ -194,7 +254,7 @@ function buildAccel() {
 }
 
 if (process.argv.includes('--accel')) {
-  buildAccel();
+  await buildAccel();
 } else if (WANT_VENDOR) {
   console.error('[esstr-build] --vendor requires --accel (only accel artifacts are vendored)');
   process.exit(1);

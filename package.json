@@ -1,6 +1,6 @@
 {
   "name": "esstr",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "ESSTR — String whitespace methods (trim/trimLeft/trimRight/trimStart/trimEnd) for Adobe ExtendScript (ES3), engine-measured and spec-exact",
   "type": "module",
   "main": "dist/esstr-core.esm.mjs",
@@ -10,12 +10,12 @@
     "native-build": "powershell -ExecutionPolicy Bypass -File native/build.ps1",
     "native-verify": "node native/verify-accel-dll.mjs",
     "native-parity": "node native/trim-parity.mjs",
-    "test": "node tests/esstr-test.mjs && node native/trim-parity.mjs",
+    "test": "node tests/esstr-test.mjs && node native/trim-parity.mjs && node tests/ownership.mjs && node tests/manifest-v2.mjs",
     "typecheck": "npx tsc --noEmit -p .",
     "fuzz": "node tests/fuzz.mjs",
     "benchmark": "node tests/benchmark.mjs",
-    "estc:static": "node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.jsx --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/vendor-esstr.js --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR-runtime.jsx --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/vendor-esstr-runtime.js --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.facade.jsx --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.accel.jsx --no-target && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.accel.min.jsx --no-target",
-    "estc:live-parse": "node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.jsx --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/vendor-esstr.js --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR-runtime.jsx --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/vendor-esstr-runtime.js --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.facade.jsx --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.accel.jsx --no-target --live --launch && node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.accel.min.jsx --no-target --live --launch",
+    "estc:static": "node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.jsx dist/vendor-esstr.js dist/ESSTR-runtime.jsx dist/vendor-esstr-runtime.js dist/ESSTR.facade.jsx dist/ESSTR.accel.jsx dist/ESSTR.accel.min.jsx --no-target",
+    "estc:live-parse": "node ../extendscript-toolchain/bin/estc.mjs check dist/ESSTR.jsx dist/vendor-esstr.js dist/ESSTR-runtime.jsx dist/vendor-esstr-runtime.js dist/ESSTR.facade.jsx dist/ESSTR.accel.jsx dist/ESSTR.accel.min.jsx --no-target --live --launch",
     "live-verify": "node tests/esstr-live-verify.mjs",
     "live-verify:accel": "node tests/eschars-hybrid-smoke.mjs",
     "vendor-sync": "node esstr-vendor-sync.mjs",
@@ -23,7 +23,10 @@
     "verify": "npm run typecheck && npm run build:accel && npm run test && npm run fuzz && npm run estc:static",
     "release:gate": "npm run verify && npm run estc:live-parse && npm run live-verify && npm run live-verify:accel",
     "release:integration": "npm run vendor-sync && npm run vendor-sync-check",
-    "prepublishOnly": "npm run release:gate"
+    "prepublishOnly": "npm run release:gate",
+    "verify:engine": "npm run estc:live-parse && npm run live-verify && npm run live-verify:accel",
+    "ci:static": "npm run verify",
+    "ci:local": "npm run ci:static && npm run verify:engine"
   },
   "files": [
     "dist/ESSTR.jsx",
@@ -59,6 +62,8 @@
     "tests/eschars-hybrid-smoke.mjs",
     "tests/esstr-test-entry.ts",
     "tests/esstr-test.mjs",
+    "tests/manifest-v2.mjs",
+    "tests/ownership.mjs",
     "tests/fuzz-entry.ts",
     "tests/fuzz.mjs",
     "tests/globals.d.ts",
@@ -70,6 +75,7 @@
     "RELEASE_NOTES-v1.1.1.md",
     "RELEASE_NOTES-v1.2.0.md",
     "RELEASE_NOTES-v1.2.2.md",
+    "RELEASE_NOTES-v1.3.0.md",
     "LICENSE",
     "package.json",
     "tsconfig.json"

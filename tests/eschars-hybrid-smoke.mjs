@@ -4,13 +4,12 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLegacyComToolV2Runner } from '../../extendscript-toolchain/src/comtool-v2-compat.mjs';
+import { createComToolRunner } from '../../extendscript-toolchain/src/comtool-compat.mjs';
 
 var ROOT = dirname(fileURLToPath(import.meta.url));
 var PROJECT = join(ROOT, '..');
 var ACCEL = join(PROJECT, 'dist', 'ESSTR.accel.jsx');
-var COM = createLegacyComToolV2Runner();
-process.on('exit', function () { try { COM.close(); } catch (ignore) {} });
+var COM = createComToolRunner();
 
 if (!existsSync(ACCEL)) { console.error('hybrid-smoke: build first (npm run build:accel)'); process.exit(1); }
 
@@ -21,6 +20,11 @@ var accelPath = ACCEL.replace(/\\/g, '/');
 
 var src = [
   '#target illustrator',
+  '$.global["ESSTR"] = null;',
+  '$.global["ESCHARS"] = null;',
+  '$.global["ESB64"] = null;',
+  '$.global["ESPAK"] = null;',
+  '$.global["__ESPAK_LIBRARIES__"] = null;',
   '$.evalFile(File("' + accelPath + '"));',
   'var out = { ok: true, engine: $.version, checks: [], calls: 0, leftCalls: 0, rightCalls: 0, status: null, finalStatus: null };',
   'function check(name, cond, detail) { out.checks[out.checks.length] = { name: name, ok: !!cond, detail: detail || "" }; if (!cond) out.ok = false; }',
@@ -81,7 +85,7 @@ var src = [
 ].join('\n');
 writeFileSync(probePath, src, 'utf8');
 
-var env = COM.run(
+var env = await COM.run(
   ['eval', '--file', probePath.replace(/\\/g, '/'), '--launch'],
   { timeoutMs: 300000 }
 );
@@ -94,3 +98,4 @@ for (var i = 0; i < report.checks.length; i++) {
   console.log('  ' + (c.ok ? 'ok  ' : 'FAIL') + ' ' + c.name + (c.detail ? ' — ' + c.detail : ''));
 }
 if (bad.length > 0) { process.exit(1); }
+await COM.close();

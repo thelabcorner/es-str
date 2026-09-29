@@ -8,14 +8,13 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createLegacyComToolV2Runner } from '../../extendscript-toolchain/src/comtool-v2-compat.mjs';
+import { createComToolRunner } from '../../extendscript-toolchain/src/comtool-compat.mjs';
 
 var ROOT = dirname(fileURLToPath(import.meta.url));
 var PROJECT = join(ROOT, '..');
 var DIST = join(PROJECT, 'dist');
 var VENDOR = join(DIST, 'vendor-esstr.js');
-var COM = createLegacyComToolV2Runner();
-process.on('exit', function () { try { COM.close(); } catch (ignore) {} });
+var COM = createComToolRunner();
 
 if (!existsSync(VENDOR)) {
   console.error('live-verify: build first (npm run build) - ' + VENDOR + ' missing');
@@ -155,7 +154,7 @@ var pyOut;
 try {
   // --launch attaches to a running instance and only starts Illustrator when
   // none exists; it never kills or restarts a live session.
-  pyOut = COM.runText(
+  pyOut = await COM.runText(
     ['eval', '--file', probePath.replace(/\\/g, '/'), '--launch'],
     { timeoutMs: 300000 }
   );
@@ -211,6 +210,7 @@ if (failures > 0 || extraFailures > 0) {
   process.exit(1);
 }
 console.log('live-verify: all vectors + wrappers verified in the live engine');
+await COM.close();
 
 function esbuildBin() {
   var direct = join(PROJECT, 'node_modules', 'esbuild', 'bin', 'esbuild');

@@ -55,6 +55,21 @@ Deterministic random streams and sampling for ExtendScript.
 **[ESUUID](https://github.com/thelabcorner/es-uuid)**  
 RFC 9562 UUID generation, parsing, and conversion for ExtendScript.
 
+**[ESENV](https://github.com/thelabcorner/es-env)**  
+Environment and capability detection for ExtendScript.
+
+**[ESPATH](https://github.com/thelabcorner/es-path)**  
+Deterministic Windows/POSIX path and RFC 8089 file-URI transformations.
+
+**[ESFS](https://github.com/thelabcorner/es-fs)**  
+Synchronous ExtendScript File/Folder I/O with explicit text, BINARY, and replacement semantics.
+
+**[ESHASH](https://github.com/thelabcorner/es-hash)**  
+CRC-32/ISO-HDLC and SHA-256 for byte strings and UTF-8 text.
+
+**[ESLOG](https://github.com/thelabcorner/es-log)**  
+Structured logging with bounded text and JSONL sinks.
+
 </td>
 <td width="50%" valign="top">
 
@@ -80,6 +95,9 @@ Native state and durable storage for Adobe tooling.
 
 **[COMTool](https://github.com/thelabcorner/COMTool)**  
 Guarded COM, ExtendScript, plug-in, and debugger automation for Adobe desktop apps.
+
+**ESsemble** <sub>coming soon</sub>  
+Typed framework, resolver, and composition layer for the ExtendScript toolkit.
 
 **ESOBF** <sub>coming soon</sub>  
 Obfuscation for hardened JSX distribution.
@@ -134,7 +152,7 @@ The engine makes this harder than it looks:
 - **Never mangles data**: NULs and lone surrogates at the edges survive (the scan is code-unit based; `substring` is used for the result, never `charAt`).
 - **True polyfill install**: gap-fills `String.prototype.trim/trimLeft/trimRight/trimStart/trimEnd` only when absent; `install({ forceReplace: true })` overrides. The `ESSTR` facade (pure functions) is always available.
 - **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 13.9 KB, methods only) for per-eval injection.
-- **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. The accel bundle is merge-composed with ESCHARS (`ESChars.dll`) through `espack-merge`, so ESSTR and ESCHARS share one ESPACK loader and one `ESB64Native` decoder instead of nested bundles. The pure ES3 scanner stays the fallback and semantic authority.
+- **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. ESPACK 0.5 manifest-v2 composition resolves the stable `esb64 -> eschars -> esstr` library closure dependency-first, records exact UTF-8 artifact byte lengths and SHA-256 provenance, and emits one persistent ESPAK control plane rather than nested bundles. The pure ES3 scanner stays the fallback and semantic authority.
 
 ---
 
@@ -267,7 +285,7 @@ Measured live in Adobe Illustrator 30.6.0 / ExtendScript 4.5.6, best-of-9 primed
 
 ### Native acceleration (`ESSTR.accel.jsx`)
 
-`ESSTR.accel.jsx` is an ESPACK self-extracting bundle. It is built with `espack-merge`: one loader, one shared `ESB64Native` accelerator, and flat `ESSTRTrim.dll` + `ESChars.dll` payloads. On eval it materializes `ESSTRTrim.dll`, loads it through `ExternalObject`, enables the native trim gate when the DLL passes a numeric smoke check, and publishes the merged ESCHARS facade for sibling byte-unit workloads. The native lane is deliberately conservative:
+`ESSTR.accel.jsx` is an ESPACK 0.5 manifest-v2 self-extracting root bundle. The manifest declares ESSTR 1.3.0 as requiring ESCHARS `^1.2.0`; ESCHARS in turn requires ESB64 `^1.3.0`, so the emitted library order is deterministic and dependency-first. Each library activation artifact is stored with its exact UTF-8 byte length and SHA-256, while native capabilities remain explicit (`eschars.native` required by the ESCHARS layer and `esstr.native` optional for the trim accelerator). On eval ESPACK owns the extracted `ESSTRTrim.dll` ExternalObject and ESSTR borrows that object through `enableNativeGate()`; ESSTR never unloads the borrowed handle. The native lane is deliberately conservative:
 
 - strings shorter than the native threshold stay in the ES3 lane because the memoized scanner is already faster for short/repeated values;
 - strings containing NUL or surrogate code units stay in the ES3 lane because the ExternalObject string boundary is unsafe for those units;
@@ -281,7 +299,7 @@ Build it with `npm run native-build && npm run build:accel` after building the s
 
 ## Security Model
 
-The default ESSTR builds are pure data-transform libraries: plain function definitions installed onto `String.prototype`. No network access and no document mutation. The accelerated build evals only bundled facades that ESSTR ships (`ESSTR`, merged `ESCHARS`, and ESPACK loader code), writes extracted DLL payloads to ESPACK's local cache, then loads them through `ExternalObject`. The ES3 lane never depends on native lanes: native load, binding, or call failure falls back to the pure scanner. The only override surface is deliberate: `install({ forceReplace: true })` replaces an existing native implementation; the default gap-fill install leaves natives untouched.
+The default ESSTR builds are pure data-transform libraries: plain function definitions installed onto `String.prototype`. No network access and no document mutation. The accelerated build evaluates the manifest-v2 ESB64, ESCHARS, and ESSTR activation artifacts through one ESPACK control plane, writes native payloads to ESPACK's local cache, and passes ESPACK-owned ExternalObjects into the dependent facade instead of creating a second owner. The ES3 lane never depends on native lanes: native load, binding, or call failure falls back to the pure scanner. The only override surface is deliberate: `install({ forceReplace: true })` replaces an existing native implementation; the default gap-fill install leaves natives untouched.
 
 ---
 
