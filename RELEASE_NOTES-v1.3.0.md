@@ -16,11 +16,13 @@
 ## Verification
 
 - `npm run release:gate`: exit 0 on the final v1.3.0 release candidate.
-- Typecheck, accelerated build, core/differential/native parity tests, ownership checks, manifest-v2 checks, seeded fuzzing, and ESTC static parse: pass.
-- ESTC live parse: pass on Adobe Illustrator 30.6.0 / ExtendScript 4.5.6 through COMTool V2.
-- Root-only accelerated proof: cold evaluation activates ESB64 -> ESCHARS -> ESSTR transitively through one ESPAK control plane.
-- Native ESSTR trim acceleration and ESCHARS fallback/hybrid behavior: pass.
-- COM-skill vendor copies of `ESSTR.accel.jsx` and `ESSTR.accel.min.jsx` are byte-identical to the final generated artifacts.
+- Core/differential/coercion suite: **20,059 checks passed**; native trim ABI parity: **PASS**; borrowed-ownership and manifest-v2 contracts: **PASS**.
+- Seeded differential fuzzing: **200,000 iterations passed** (`seed 31337`).
+- ESTC static/live parse: all seven shipped ExtendScript surfaces pass on Adobe Illustrator 30.6.0 / ExtendScript 4.5.6 through COMTool V2.
+- Standalone live verification: **47/47 vectors passed**.
+- Root-only accelerated proof: cold evaluation activates `ESB64 -> ESCHARS -> ESSTR` transitively through one ESPAK control plane; native ESSTR trim acceleration and ESCHARS fallback/hybrid behavior both pass.
+- Final composed UTF-8 sizes: `ESSTR.accel.jsx` **285,984 B**; `ESSTR.accel.min.jsx` **253,921 B**.
+- COM-skill vendor copies of both accelerated artifacts are byte-identical to the final generated files.
 
 ## Release assets
 
