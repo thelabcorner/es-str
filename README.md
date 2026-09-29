@@ -11,7 +11,7 @@
 [![Engine parity: live](https://img.shields.io/badge/engine%20parity-live%2047%2F47%20vectors-green)](https://extendscript.docsforadobe.dev/)
 [![Adobe: Creative Suite](https://img.shields.io/badge/Adobe%20-Creative%20Suite-red?logo=adobe&logoColor=white)](https://extendscript.docsforadobe.dev/)
 [![Engine](https://img.shields.io/badge/ExtendScript-ES3-green)](#compatibility)
-[![Size](https://img.shields.io/badge/runtime-13.9%20KB-orange)](#installation)
+[![Size](https://img.shields.io/badge/runtime-7.6%20KB-orange)](#installation)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL%203.0--or--later-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 </div>
@@ -151,7 +151,7 @@ The engine makes this harder than it looks:
 - **ToString semantics, exactly like Node**: `trim.call(123)` → `'123'`, `trim.call(new String(' x '))` → `'x'`; `null`/`undefined` throw `TypeError` (the facade guards them — the engine's own ES3 `.call(null)` semantics bind the global object, a documented engine quirk).
 - **Never mangles data**: NULs and lone surrogates at the edges survive (the scan is code-unit based; `substring` is used for the result, never `charAt`).
 - **True polyfill install**: gap-fills `String.prototype.trim/trimLeft/trimRight/trimStart/trimEnd` only when absent; `install({ forceReplace: true })` overrides. The `ESSTR` facade (pure functions) is always available.
-- **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 13.9 KB, methods only) for per-eval injection.
+- **No dependency default path**: one file. Two JSX-only builds: full (`ESSTR.jsx` / `vendor-esstr.js`) and runtime (`vendor-esstr-runtime.js`, 7,565 B, methods only) for per-eval injection.
 - **Optional Windows x64 accelerator**: `ESSTRTrim.dll` plus `ESSTR.accel.jsx` / `.min.jsx` provide an ExternalObject-backed long-string lane. ESPACK 0.5 manifest-v2 composition resolves the stable `esb64 -> eschars -> esstr` library closure dependency-first, records exact UTF-8 artifact byte lengths and SHA-256 provenance, and emits one persistent ESPAK control plane rather than nested bundles. The pure ES3 scanner stays the fallback and semantic authority.
 
 ---
@@ -161,7 +161,7 @@ The engine makes this harder than it looks:
 | | **Runtime build** | **Full build** | **Accelerated build** |
 |---|---|---|---|
 | Files | `vendor-esstr-runtime.js` | `vendor-esstr.js`, `ESSTR.jsx` | `ESSTR.accel.jsx`, `ESSTR.accel.min.jsx`, `ESSTRTrim.dll` |
-| Size | 13.9 KB | 20.2 KB / 19.5 KB | 245.7 KB / 214.1 KB / 3.0 KB |
+| Size | 7,565 B | 12,101 B (`vendor-esstr.js`) / 11,466 B (`ESSTR.jsx`) | 285,984 B / 253,921 B / 3,072 B |
 | API | the 5 methods | methods + `capabilities()`, `install()`, `benchmark()` | full API + `enableNativeGate()`, `disableNativeGate()`, `nativeGateStatus()`, `useEspack()` |
 | Installs `String.prototype.*` | yes (gap-fill) | yes (gap-fill) | yes (gap-fill) |
 | Best for | per-eval injection, scripts that only need trim | libraries that want install control or capability census | Windows x64 scripts that want a self-extracting native lane for long strings |
