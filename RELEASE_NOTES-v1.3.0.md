@@ -21,7 +21,7 @@
 - ESTC static/live parse: all seven shipped ExtendScript surfaces pass on Adobe Illustrator 30.6.0 / ExtendScript 4.5.6 through COMTool V2.
 - Standalone live verification: **47/47 vectors passed**.
 - Root-only accelerated proof: cold evaluation activates `ESB64 -> ESCHARS -> ESSTR` transitively through one ESPAK control plane; native ESSTR trim acceleration and ESCHARS fallback/hybrid behavior both pass.
-- Final composed UTF-8 sizes: `ESSTR.accel.jsx` **285,984 B**; `ESSTR.accel.min.jsx` **253,921 B**.
+- Final composed UTF-8 sizes: `ESSTR.accel.jsx` **285,978 B**; `ESSTR.accel.min.jsx` **253,921 B**.
 - COM-skill vendor copies of both accelerated artifacts are byte-identical to the final generated files.
 
 ## Release assets
